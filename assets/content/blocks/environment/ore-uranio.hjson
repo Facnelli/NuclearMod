@@ -1,0 +1,16 @@
+type: OreBlock
+localizedName: Minério de Urânio
+itemDrop: uranio
+variants: 3
+
+# --- AS LINHAS MÁGICAS PARA O GERADOR DE MAPAS ---
+
+# Permite que o minério apareça no menu de geração do mapa
+oreDefault: true
+
+# Define o tamanho das manchas (quanto maior o número, maiores as "poças" de minério)
+oreScale: 24.0
+
+# Define a raridade (varia de 0.0 a 1.0. Quanto mais alto, mais raro/difícil de aparecer)
+# 0.88 fará com que o urânio seja um pouco raro, parecido com o Tório.
+oreThreshold: 0.88

@@ -1,0 +1,50 @@
+type: GenericCrafter
+name: refinaria-uranio
+localizedName: Refinaria de Urânio
+description: Utiliza escória fervente e plastânio para purificar o urânio bruto em urânio enriquecido.
+
+# Tamanho 3x3 é um bom padrão para fábricas avançadas
+size: 3
+health: 360
+
+category: crafting
+alwaysUnlocked: true
+
+# Materiais necessários para o jogador construir a fábrica no mapa
+requirements: [
+  copper/200
+  lead/150
+  silicon/100
+  plastanium/50
+]
+
+# Configurações de tempo e capacidade
+craftTime: 120 # Tempo em ticks (60 ticks = 1 segundo, então leva 2 segundos por ciclo)
+itemCapacity: 20
+liquidCapacity: 50
+
+# O que a fábrica produz
+outputItem: uranio-enriquecido/1
+
+# O que a fábrica consome para funcionar
+consumes: {
+  power: 4.0 # Consome 240 de energia por segundo (4.0 * 60)
+  items: [
+    uranio/2
+    plastanium/1
+  ]
+  liquids: [
+    # 0.2 por tick significa 12 de escória por segundo
+    slag/0.2
+  ]
+}
+
+# Efeitos visuais enquanto está funcionando
+updateEffect: smeltsmoke
+craftEffect: formsmoke
+ambientSound: smelter
+ambientSoundVolume: 0.5
+
+# --- EFEITOS DE DESTRUIÇÃO DRAMÁTICOS ---
+destroyEffect: reactorExplosion
+destroySound: explosionbig

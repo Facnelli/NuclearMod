@@ -1,0 +1,12 @@
+type: Item
+name: uranio-enriquecido
+localizedName: Urânio Enriquecido
+description: Urânio purificado e altamente instável. Usado exclusivamente para munição de destruição em massa.
+
+# Uma cor um pouco diferente do urânio normal (um verde mais claro/amarelado)
+color: 74f53d
+
+hardness: 0
+# Valores muito mais altos que o urânio normal
+radioactivity: 2.5
+explosiveness: 1.5
