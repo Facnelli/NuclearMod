@@ -1,0 +1,31 @@
+type: nuclearmod.blocks.SiloNuclear
+name: silo-misseis
+localizedName: Silo de misseis 
+description: Silo de mísseis tático de controle manual. Assuma o controle para disparar e não atire perto demais.
+
+size: 4
+health: 1200 
+clipSize: 6000
+
+category: turret
+alwaysUnlocked: true
+
+requirements: [
+  lead/2000
+  silicon/1200
+  plastanium/500
+  surge-alloy/500
+]
+
+range: 6000
+reload: 300
+inaccuracy: 0
+shootSound: artillery
+shootCone: 30
+
+# --- A MÁGICA DO CONTROLE MANUAL ---
+# Desativamos a visão da torre. Ela não atirará sozinha em nada.
+targetAir: false 
+targetGround: false
+# Garante que o jogador pode entrar nela para atirar
+playerControllable: true 

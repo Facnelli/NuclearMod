@@ -3,7 +3,7 @@ displayName: "Nuclear Mod"
 author: "Fachinelli"
 description: "Adiciona uma cadeia de produção de urânio e um silo de mísseis manuais."
 version: "1.0"
-minGameVersion: 145
+minGameVersion: 154
 
 # A mágica acontece aqui:
 java: true

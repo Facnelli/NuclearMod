@@ -1,35 +1,25 @@
 package nuclearmod;
 
-import arc.Events;
-import mindustry.game.EventType.TapEvent;
-import mindustry.gen.Call;
+import arc.util.Log;
 import mindustry.mod.Mod;
-
-import mindustry.world.blocks.defense.turrets.ItemTurret.ItemTurretBuild;
+import nuclearmod.content.ModBlocks;
+import nuclearmod.content.ModFx;
+import nuclearmod.content.ModItems;
 
 public class NuclearMod extends Mod {
 
+    public NuclearMod() {
+        Log.info("Nuclear Mod inicializado!");
+    }
+
     @Override
-    public void init() {
-        Events.on(TapEvent.class, event -> {
+    public void loadContent() {
+        Log.info("Carregando conteúdo do Nuclear Mod...");
 
-            // 1. Verificamos se o que foi clicado é uma construção válida
-            if (event.tile != null && event.tile.build != null) {
+        ModItems.load();
+        ModFx.load();
+        ModBlocks.load();
 
-                // 2. Verificamos se essa construção é especificamente uma ItemTurretBuild
-                if (event.tile.build instanceof ItemTurretBuild) {
-
-                    // Criamos uma variável 'build' que nos permite ver o que tem dentro da torre
-                    ItemTurretBuild build = (ItemTurretBuild) event.tile.build;
-
-                    // 3. Checamos se o nome do bloco está correto E se ela tem munição
-                    if (build.block.name.equals("nuclear-mod-silo-misseis") && build.hasAmmo()) {
-
-                        // O alarme só toca se houver balas/mísseis carregados!
-                        Call.announce("[scarlet]⚠ ALERTA NUCLEAR: [white]Silo carregado e ativado por " + event.player.name + "!");
-                    }
-                }
-            }
-        });
+        Log.info("Conteúdo carregado e pronto para lançamento!");
     }
 }

@@ -1,0 +1,8 @@
+type: Item
+name: steel
+localizedName: Aço
+description: Um metal para construção de misseis criado a partir do ferro e grafite
+
+hardness: 0
+radioactivity: 0.0
+explosiveness: 0.0

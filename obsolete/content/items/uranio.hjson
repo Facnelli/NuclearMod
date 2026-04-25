@@ -6,8 +6,6 @@ description: Minério pesado e altamente radioativo. Usado para fabricar ogivas 
 # Uma cor verde neon em formato HEX
 color: 3bd14b
 
-# Nível de dureza para minerar.
-# 4 significa que precisa pelo menos de uma Broca a Laser (Laser Drill)
 hardness: 4
 
 # Atributos especiais (opcional, mas legal para o tema)

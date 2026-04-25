@@ -1,0 +1,8 @@
+type: OreBlock
+localizedName: Minério de ferro
+itemDrop: iron
+variants: 1
+
+oreDefault: true
+oreScale: 30.0
+oreThreshold: 0.4
