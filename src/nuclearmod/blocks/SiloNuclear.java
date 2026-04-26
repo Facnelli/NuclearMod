@@ -8,21 +8,219 @@ import mindustry.Vars;
 import mindustry.content.Fx;
 import mindustry.content.StatusEffects;
 import mindustry.entities.Effect;
-import mindustry.entities.Fires;
 import mindustry.entities.Units;
 import mindustry.entities.bullet.ArtilleryBulletType;
+import mindustry.entities.bullet.BasicBulletType;
 import mindustry.entities.bullet.BulletType;
 import mindustry.gen.Building;
 import mindustry.gen.Bullet;
 import mindustry.gen.Call;
+import mindustry.gen.Groups;
+import mindustry.type.StatusEffect;
 import mindustry.world.Tile;
 import mindustry.world.blocks.defense.turrets.ItemTurret;
 import mindustry.world.blocks.payloads.BuildPayload;
 import mindustry.world.blocks.payloads.Payload;
 import nuclearmod.content.ModFx;
+import arc.graphics.g2d.Draw;
+import arc.graphics.g2d.Fill;
+import arc.math.Angles;
 
 public class SiloNuclear extends ItemTurret {
 
+    // =========================================================
+    // EFEITO VISUAL: Fogo Azul (Maior, denso e duradouro)
+    // =========================================================
+    public static final Effect virusBlueFire = new Effect(90f, e -> { // Tempo dobrado para 90f
+        Draw.color(Color.valueOf("00aaff"), Color.valueOf("0044cc"), Color.darkGray, e.fin());
+        // Aumentado para 5 vetores e raio de dispersão maior (10f)
+        Angles.randLenVectors(e.id, 5, 2f + e.fin() * 10f, (x, y) -> {
+            // Círculos maiores
+            Fill.circle(e.x + x, e.y + y, 0.8f + e.fout() * 2.5f);
+        });
+    });
+
+    // =========================================================
+    // 1. O VÍRUS DO FOGO NA CONSTRUÇÃO
+    // =========================================================
+    public static class ViralFire extends BulletType {
+        public ViralFire() {
+            super(0f, 0f);
+            lifetime = 18000f;
+            pierce = true;
+            pierceBuilding = true;
+            collides = false;
+            hittable = false;
+            absorbable = false;
+            drawSize = 0f;
+        }
+
+        @Override
+        public void draw(Bullet b) {}
+
+        @Override
+        public void update(Bullet b) {
+            super.update(b);
+            Tile tile = Vars.world.tileWorld(b.x, b.y);
+
+            if (tile == null || tile.build == null) {
+                b.remove();
+                return;
+            }
+
+            // -------------------------------------------------------------
+            // ENGANANDO A IA: Fogo Tradicional para atrair as torres de água!
+            // -------------------------------------------------------------
+            // A cada mais ou menos 1 segundo, ele gera um fogo comum no bloco.
+            // O fogo azul é grande o suficiente para engolir o visual dele,
+            // mas é o suficiente para as torres Wave e Tsunami mirarem no bloco!
+            if (Mathf.chanceDelta(0.075f)) {
+                mindustry.entities.Fires.create(tile);
+            }
+
+            // -------------------------------------------------------------
+            // A CURA: Água ou Criogênio matam o vírus
+            // -------------------------------------------------------------
+            mindustry.gen.Puddle poca = mindustry.entities.Puddles.get(tile);
+            // Reduzi a exigência de amount para 0.2f (Bem mais sensível à água das torres!)
+            if (poca != null && poca.liquid.temperature <= 0.5f && poca.amount > 0.2f) {
+                b.remove(); // Vírus apagado com sucesso!
+                return;
+            }
+
+            // -------------------------------------------------------------
+            // VISUAL E DANO (Separados)
+            // -------------------------------------------------------------
+            if (Mathf.chanceDelta(0.3f)) {
+                virusBlueFire.at(tile.worldx() + Mathf.range(6f), tile.worldy() + Mathf.range(6f));
+            }
+
+            if (Mathf.chanceDelta(0.01f)) {
+                tile.build.damage(2f);
+            }
+
+            // -------------------------------------------------------------
+            // CONTAMINAÇÃO DE TROPAS TERRESTRES
+            // -------------------------------------------------------------
+            if (Mathf.chanceDelta(0.05f)) {
+                Units.nearby(b.x - 8f, b.y - 8f, 16f, 16f, u -> {
+                    if (!u.hasEffect(StatusEffects.wet) && !u.hasEffect(StatusEffects.freezing)) {
+                        u.apply(virusAzulUnidades, 300f);
+                    }
+                });
+            }
+
+            // -------------------------------------------------------------
+            // PULSO DE CONTÁGIO ENTRE BLOCOS
+            // -------------------------------------------------------------
+            if (Mathf.chanceDelta(0.030f)) {
+                for (int dx = -3; dx <= 3; dx++) {
+                    for (int dy = -3; dy <= 3; dy++) {
+                        if (dx == 0 && dy == 0) continue;
+
+                        if (Mathf.chance(0.01f)) {
+                            Tile vizinho = Vars.world.tile(tile.x + dx, tile.y + dy);
+                            if (vizinho != null && vizinho.build != null) {
+                                boolean[] jaInfectado = {false};
+                                Groups.bullet.intersect(vizinho.worldx() - 1f, vizinho.worldy() - 1f, 2f, 2f, other -> {
+                                    if (other.type == this) jaInfectado[0] = true;
+                                });
+
+                                if (!jaInfectado[0]) {
+                                    Call.createBullet(this, b.team, vizinho.worldx(), vizinho.worldy(), 0f, 0f, 1f, 1f);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Instância única do Fogo Viral para ser referenciada
+    public static ViralFire fogoViral = new ViralFire();
+
+    // =========================================================
+    // 2. STATUS EFFECT: O Vírus nas Unidades
+    // =========================================================
+    public static final StatusEffect virusAzulUnidades = new StatusEffect("virus-azul-unidades") {
+        {
+            color = Color.valueOf("00aaff");
+            damage = 0.2f; // Dano contínuo enquanto a tropa está infectada
+            effect = virusBlueFire;
+            effectChance = 0.15f;
+        }
+
+        @Override
+        public void update(mindustry.gen.Unit unit, mindustry.entities.units.StatusEntry entry) {
+            super.update(unit, entry); // Passando o novo objeto entry para o super
+
+            // A cura: Se a unidade passar na água, o vírus some
+            if (unit.hasEffect(StatusEffects.wet) || unit.hasEffect(StatusEffects.freezing)) {
+                unit.unapply(this);
+            }
+
+            // O Rastro: Unidade infectada espalha o fogo para as construções por onde passa
+            if (Mathf.chanceDelta(0.1f)) {
+                Tile t = unit.tileOn();
+                if (t != null && t.build != null) {
+                    boolean[] jaInfectado = {false};
+                    Groups.bullet.intersect(t.worldx() - 1f, t.worldy() - 1f, 2f, 2f, other -> {
+                        if (other.type instanceof ViralFire) jaInfectado[0] = true;
+                    });
+                    if (!jaInfectado[0]) {
+                        Call.createBullet(fogoViral, unit.team, t.worldx(), t.worldy(), 0f, 0f, 1f, 1f);
+                    }
+                }
+            }
+        }
+    };
+
+    // =========================================================
+    // 3. FAÍSCAS (Transportam o vírus para as bordas)
+    // =========================================================
+    public static class NukeSpark extends BasicBulletType {
+        public ViralFire viralType;
+
+        public NukeSpark(ViralFire viralType) {
+            super(8f, 0f);
+            this.viralType = viralType;
+            this.lifetime = 55f;
+            this.trailColor = Color.valueOf("00aaff");
+            this.trailWidth = 3f;
+            this.trailLength = 20;
+            this.frontColor = Color.white;
+            this.backColor = Color.valueOf("0044cc");
+            this.hitEffect = Fx.hitFlameSmall;
+            this.despawnEffect = Fx.none;
+            this.collidesAir = false;
+            fragVelocityMin = 0.8f;
+            fragVelocityMax = 1.5f;
+        }
+
+        @Override
+        public void hitTile(Bullet b, Building build, float x, float y, float initialHealth, boolean direct) {
+            super.hitTile(b, build, x, y, initialHealth, direct);
+            if (build != null) {
+                Call.createBullet(viralType, b.team, build.x, build.y, 0f, 0f, 1f, 1f);
+            }
+        }
+
+        @Override
+        public void hitEntity(Bullet b, mindustry.gen.Hitboxc entity, float initialHealth) {
+            super.hitEntity(b, entity, initialHealth);
+            if (entity instanceof Building build) {
+                Call.createBullet(viralType, b.team, build.x, build.y, 0f, 0f, 1f, 1f);
+            }
+        }
+    }
+
+    public static NukeSpark faiscaNuke = new NukeSpark(fogoViral);
+
+
+    // =========================================================
+    // 4. A BOMBA PRINCIPAL
+    // =========================================================
     public static class NukeBulletType extends ArtilleryBulletType {
         public NukeBulletType() {
             super(2f, 100000f);
@@ -45,7 +243,6 @@ public class SiloNuclear extends ItemTurret {
             this.hitShake = 50f;
         }
 
-        // Classe auxiliar para mapear onde os escudos estão
         private static class ShieldSegment {
             LinearShieldProjector.LinearShieldBuild s1, s2;
             ShieldSegment(LinearShieldProjector.LinearShieldBuild s1, LinearShieldProjector.LinearShieldBuild s2) {
@@ -69,11 +266,9 @@ public class SiloNuclear extends ItemTurret {
             ModFx.nukeExplosion.at(ex, ey);
             Effect.shake(60f, 60f, ex, ey);
 
-            // Coordenadas centrais (tiles) para o Raycast do mapa
             int originTx = Math.round(ex / Vars.tilesize);
             int originTy = Math.round(ey / Vars.tilesize);
 
-            // Coleta todas as linhas de escudo ativas no mapa
             Seq<ShieldSegment> activeSegments = new Seq<>();
             for (LinearShieldProjector.LinearShieldBuild shield : LinearShieldProjector.activeShields) {
                 if (shield.broken || shield.warmup <= 0.5f) continue;
@@ -88,12 +283,11 @@ public class SiloNuclear extends ItemTurret {
 
             int tx = (int)(ex / Vars.tilesize);
             int ty = (int)(ey / Vars.tilesize);
-            int raioTotalBlocos = 40; // O raio da explosão nuclear
+            int raioTotalBlocos = 40;
 
             Seq<Building> alvosCriticos = new Seq<>();
             Seq<Building> alvosSeveros = new Seq<>();
 
-            // Onda de calor e destruição de blocos
             for (int dx = -raioTotalBlocos; dx <= raioTotalBlocos; dx++) {
                 for (int dy = -raioTotalBlocos; dy <= raioTotalBlocos; dy++) {
                     float distBlocos = Mathf.dst(0, 0, dx, dy);
@@ -106,7 +300,6 @@ public class SiloNuclear extends ItemTurret {
                     float targetY = tile.worldy();
                     boolean isShielded = false;
 
-                    // 1. VERIFICAÇÃO DE SOMBRA: Escudos de Energia
                     for (ShieldSegment seg : activeSegments) {
                         if (Intersector.intersectSegments(ex, ey, targetX, targetY, seg.s1.x, seg.s1.y, seg.s2.x, seg.s2.y, null)) {
                             isShielded = true;
@@ -114,49 +307,52 @@ public class SiloNuclear extends ItemTurret {
                         }
                     }
 
-                    // 2. VERIFICAÇÃO DE SOMBRA: Paredes Naturais do Mapa
                     if (!isShielded) {
                         int targetTx = tile.x;
                         int targetTy = tile.y;
 
-                        // Raycast nativo do Mindustry: lança um raio do centro da explosão até o alvo
                         boolean hitNaturalWall = Vars.world.raycast(originTx, originTy, targetTx, targetTy, (rx, ry) -> {
-                            if (rx == targetTx && ry == targetTy) return false; // Se chegou no alvo sem bater, retorna falso
+                            if (rx == targetTx && ry == targetTy) return false;
 
                             Tile checkTile = Vars.world.tile(rx, ry);
-                            // Se o tile no caminho for sólido E indestrutível, é uma parede natural! Bloqueia o raio.
-                            if (checkTile != null && checkTile.solid() && !checkTile.block().destructible) {
+                            if (checkTile != null && checkTile.solid() && checkTile.build == null) {
                                 return true;
                             }
                             return false;
                         });
 
                         if (hitNaturalWall) {
-                            isShielded = true; // Salvo pela montanha!
+                            isShielded = true;
                         }
                     }
 
-                    // Se não estiver na sombra (nem de escudo, nem de montanha), recebe o dano
                     if (!isShielded) {
                         if (tile.build != null) {
                             if (distBlocos <= 28f) alvosCriticos.addUnique(tile.build);
                             else alvosSeveros.addUnique(tile.build);
                         }
-                        if (distBlocos > 20f && Mathf.chance(0.8f)) Fires.create(tile);
+
+                        if (dx % 2 == 0 && dy % 2 == 0) {
+                            ModFx.nukeScorch.at(targetX, targetY);
+                        }
+
+                        // === O SEU ANEL DE FOGO VOLTOU AQUI! ===
+                        if (distBlocos > 20f && Mathf.chance(0.8f)) {
+                            mindustry.entities.Puddles.deposit(tile, mindustry.content.Liquids.oil, 10000f);
+                            mindustry.entities.Fires.create(tile);
+                        }
+                        // =======================================
                     }
                 }
             }
 
-            // Aplica os danos concentrados nas construções
             for(Building alvo : alvosCriticos) alvo.damage(100000f);
-            for(Building alvo : alvosSeveros) alvo.damage(20000f);
+            for(Building alvo : alvosSeveros) alvo.damage(100f);
 
-            // Dano em Unidades (Seguindo a mesma lógica de dupla verificação)
             float raioPixels = raioTotalBlocos * Vars.tilesize;
             Units.nearby(ex - raioPixels, ey - raioPixels, raioPixels * 2, raioPixels * 2, u -> {
                 boolean unitShielded = false;
 
-                // 1. Sombra do Escudo
                 for (ShieldSegment seg : activeSegments) {
                     if (Intersector.intersectSegments(ex, ey, u.x, u.y, seg.s1.x, seg.s1.y, seg.s2.x, seg.s2.y, null)) {
                         unitShielded = true;
@@ -164,7 +360,6 @@ public class SiloNuclear extends ItemTurret {
                     }
                 }
 
-                // 2. Sombra das Montanhas
                 if (!unitShielded) {
                     int targetTx = Math.round(u.x / Vars.tilesize);
                     int targetTy = Math.round(u.y / Vars.tilesize);
@@ -172,7 +367,7 @@ public class SiloNuclear extends ItemTurret {
                     boolean hitNaturalWall = Vars.world.raycast(originTx, originTy, targetTx, targetTy, (rx, ry) -> {
                         if (rx == targetTx && ry == targetTy) return false;
                         Tile checkTile = Vars.world.tile(rx, ry);
-                        if (checkTile != null && checkTile.solid() && !checkTile.block().destructible) {
+                        if (checkTile != null && checkTile.solid() && checkTile.build == null) {
                             return true;
                         }
                         return false;
@@ -181,16 +376,21 @@ public class SiloNuclear extends ItemTurret {
                     if (hitNaturalWall) unitShielded = true;
                 }
 
-                // Aplica dano/fogo apenas se a unidade estiver desprotegida
                 if (!unitShielded) {
                     float dist = u.dst(ex, ey) / Vars.tilesize;
                     if(dist <= 25f) u.kill();
                     else {
-                        u.damage(15000f);
-                        u.apply(StatusEffects.burning, 900f);
+                        u.damage(1000f);
+                        u.apply(StatusEffects.burning, 9999999f);
                     }
                 }
             });
+
+            for (int i = 0; i < 70; i++) {
+                float angle = Mathf.random(360f);
+                float lifeScale = Mathf.random(0.7f, 1.3f);
+                Call.createBullet(faiscaNuke, b.team, ex, ey, angle, 1f, lifeScale, 1f);
+            }
         }
     }
 
@@ -210,7 +410,10 @@ public class SiloNuclear extends ItemTurret {
 
         @Override
         public void handlePayload(Building source, Payload payload) {
-            handleItem(this, nuclearmod.content.ModItems.uranioEnriquecido);
+            // O míssil completo vale 10 unidades de munição para encher o silo de uma vez!
+            for (int i = 0; i < 10; i++) {
+                handleItem(this, nuclearmod.content.ModItems.uranioEnriquecido);
+            }
         }
 
         @Override
@@ -218,5 +421,24 @@ public class SiloNuclear extends ItemTurret {
             Call.sendMessage("[scarlet]⚠ ALERTA NUCLEAR:\n[white]Míssil lançado!");
             super.shoot(type);
         }
+        @Override
+        public void onDestroyed() {
+            if (this.hasAmmo()) {
+                var bulletType = peekAmmo();
+                if (bulletType != null) {
+                    // O penúltimo parâmetro "0f" é o multiplicador de velocidade (a bala não sai do lugar)
+                    // O último parâmetro "1f" é o multiplicador de vida
+                    Bullet b = bulletType.create(this, this.team, this.x, this.y, 0f, 0f, 1f);
+
+                    if (b != null) {
+                        // Força a bala a chamar a detonação no exato pixel e depois a remove do mapa
+                        bulletType.hit(b, this.x, this.y);
+                        b.remove();
+                    }
+                }
+            }
+            super.onDestroyed();
+        }
+
     }
 }

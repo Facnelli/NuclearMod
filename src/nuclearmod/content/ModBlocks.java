@@ -9,6 +9,7 @@ import mindustry.type.ItemStack;
 import mindustry.world.Block;
 import mindustry.world.blocks.environment.OreBlock;
 import mindustry.world.blocks.production.GenericCrafter;
+import mindustry.world.draw.DrawTurret;
 import nuclearmod.blocks.LinearShieldProjector;
 import nuclearmod.blocks.MissileAssembler;
 import nuclearmod.blocks.SiloNuclear;
@@ -39,7 +40,7 @@ public class ModBlocks {
             oreDefault = true;
             oreScale = 24.0f;
             oreThreshold = 0.88f;
-            variants = 3;
+            variants = 1;
         }};
 
         // --- REFINARIA DE URÂNIO ---
@@ -74,21 +75,26 @@ public class ModBlocks {
         siloMisseis = new SiloNuclear("silo-misseis") {{
             localizedName = "Silo de misseis";
             description = "Silo de mísseis tático de controle manual. Assuma o controle para disparar e não atire perto demais.";
-            size = 4;
+            size = 5;
             health = 1200;
             clipSize = 6000;
             category = Category.turret;
             alwaysUnlocked = true;
+            rotateSpeed = 999f;
+            shootCone = 1f;
+
+            drawer = new DrawTurret() {{
+                basePrefix = ""; // Usa a sprite padrão
+            }};
 
             requirements(Category.turret, with(Items.lead, 2000, Items.silicon, 1200, Items.plastanium, 500, Items.surgeAlloy, 500));
 
             range = 6000f;
             reload = 300f;
             inaccuracy = 0f;
-            //shootSound = Sounds.artillery;
-            shootCone = 30f;
-            itemCapacity = 1;
-            ammoPerShot = 1;
+            itemCapacity = 10;
+            ammoPerShot = 10;
+            maxAmmo = 10;
 
             targetAir = false;
             targetGround = false;

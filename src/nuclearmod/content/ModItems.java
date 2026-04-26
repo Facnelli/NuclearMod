@@ -38,7 +38,7 @@ public class ModItems {
             explosiveness = 15.0f;
         }};
 
-        circuit = new Item("circuit", Color.valueOf("4287f5")) {{
+        circuit = new Item("circuit", Color.valueOf("094D33")) {{
             localizedName = "Circuito";
             description = "Uma placa de circuito para controle do missil";
         }};

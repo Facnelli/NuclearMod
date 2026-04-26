@@ -128,22 +128,15 @@ public class LinearShieldProjector extends Block {
             }
         }
 
-        // =========================================================================
-        // MÁGICA DA INVENCIBILIDADE E DETECÇÃO DE DANO DA NUKE
-        // =========================================================================
         @Override
         public void damage(float damage) {
-            // Se já está sobrecarregando (piscando), fica imune a QUALQUER dano!
             if (isOverloading) return;
 
-            // Se for um dano massivo (como a explosão de 15k da bomba ou uma reação em cadeia)
-            // absorve o impacto e aciona a sobrecarga ao invés de morrer na hora
             if (damage >= 3000f) {
                 triggerOverload();
                 return;
             }
 
-            // Se for dano normal (tiros comuns), recebe normalmente
             super.damage(damage);
         }
 
@@ -208,10 +201,8 @@ public class LinearShieldProjector extends Block {
                 Fx.shieldBreak.at(x, y);
             }
 
-            // Timer do pisca-pisca antes da explosão
             if (isOverloading) {
                 overloadTimer += Time.delta;
-                // Ao chegar em 60 frames (1 segundo), ele finalmente explode
                 if (overloadTimer >= 60f) executeOverload();
             }
 
@@ -245,7 +236,6 @@ public class LinearShieldProjector extends Block {
                                         bullet.y = intercept.y + recuo.y;
                                         bullet.remove();
 
-                                        // Aciona a sobrecarga diretamente pela linha do escudo
                                         triggerOverload();
                                         b.triggerOverload();
                                     }
@@ -265,14 +255,13 @@ public class LinearShieldProjector extends Block {
         }
 
         public void triggerOverload() {
-            if (isOverloading) return; // Evita que ele recomece o timer se for atingido de novo
+            if (isOverloading) return;
             isOverloading = true;
             overloadTimer = 0f;
-            health = maxHealth; // Restaura a vida para não morrer pra tiros perdidos enquanto pisca!
+            health = maxHealth;
         }
 
         private void executeOverload() {
-            // 1. Avisa os vizinhos PRIMEIRO! (O "Zap da Morte")
             for (int i = 0; i < links.size; i++) {
                 Building other = Vars.world.build(links.get(i));
                 if (isValidLink(other)) {
@@ -280,10 +269,7 @@ public class LinearShieldProjector extends Block {
                 }
             }
 
-            // 2. Animação de explosão
             Fx.massiveExplosion.at(x, y);
-
-            // 3. Agora sim, morre e corta as conexões
             super.kill();
         }
 
@@ -326,10 +312,9 @@ public class LinearShieldProjector extends Block {
                 }
             }
 
-            // Animação do poste "piscando" em vermelho
             if (isOverloading) {
                 Draw.color(Color.red);
-                Draw.alpha(Mathf.absin(4f, 1f)); // Pisca rápido
+                Draw.alpha(Mathf.absin(4f, 1f));
                 Fill.circle(x, y, block.size * 4f + Mathf.absin(2f, 4f));
             }
             Draw.reset();

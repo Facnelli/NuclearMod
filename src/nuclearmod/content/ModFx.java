@@ -7,9 +7,11 @@ import arc.graphics.g2d.Lines;
 import arc.math.Mathf;
 import arc.math.Rand;
 import mindustry.entities.Effect;
+import mindustry.graphics.Layer; // Importação para desenhar as cinzas no chão
 
 public class ModFx {
     public static Effect nukeExplosion;
+    public static Effect nukeScorch; // Novo efeito declarado
 
     public static void load() {
         nukeExplosion = new Effect(1200f, 2000f, e -> {
@@ -52,6 +54,15 @@ public class ModFx {
                 Draw.alpha(e.fout(arc.math.Interp.pow2Out));
                 Fill.circle(px, py, tamanhoParticula);
             }
+            Draw.reset();
+        });
+
+        // Efeito de Cinzas/Terra Arrasada (2 minutos)
+        nukeScorch = new Effect(7200f, 3000f, e -> {
+            Draw.z(Layer.scorch);
+            Draw.color(Color.black);
+            Draw.alpha(0.8f * (1f - e.fin()));
+            Fill.square(e.x, e.y, 8f);
             Draw.reset();
         });
     }
