@@ -8,6 +8,7 @@ import arc.graphics.g2d.Lines;
 import arc.math.Angles;
 import arc.math.Mathf;
 import arc.math.geom.Intersector;
+import arc.math.geom.Vec2;
 import arc.struct.IntSeq;
 import arc.struct.Seq;
 import arc.util.Time;
@@ -28,7 +29,6 @@ import mindustry.world.meta.BlockGroup;
 public class LinearShieldProjector extends Block {
     public static Seq<LinearShieldBuild> activeShields = new Seq<>();
 
-    // Previne vazamento de memória limpando a rede ao trocar de mapa
     static {
         Events.on(ResetEvent.class, event -> activeShields.clear());
     }
@@ -46,15 +46,11 @@ public class LinearShieldProjector extends Block {
         hasPower = true;
         configurable = true;
         group = BlockGroup.projectors;
-
-        // Evita que o laser desapareça quando o centro da tela se afasta do poste
         clipSize = 400f;
 
-        // Lógica de Conexão Manual e Desconexão
         config(Integer.class, (LinearShieldBuild tile, Integer pos) -> {
             Building other = Vars.world.build(pos);
 
-            // Se clicar no próprio poste, desconecta tudo dele
             if (other == tile) {
                 for (int i = 0; i < tile.links.size; i++) {
                     Building linked = Vars.world.build(tile.links.get(i));
@@ -62,7 +58,6 @@ public class LinearShieldProjector extends Block {
                 }
                 tile.links.clear();
             }
-            // Conecta/Desconecta bidirecionalmente de um poste vizinho
             else if (other instanceof LinearShieldBuild ob && ob.team == tile.team) {
                 if (tile.links.contains(pos)) {
                     tile.links.removeValue(pos);
@@ -75,20 +70,17 @@ public class LinearShieldProjector extends Block {
         });
     }
 
-    // PRÉ-VISUALIZAÇÃO DE CONEXÃO AO COLOCAR (Ghost block)
     @Override
     public void drawPlace(int x, int y, int rotation, boolean valid) {
         super.drawPlace(x, y, rotation, valid);
         float cx = x * Vars.tilesize + offset;
         float cy = y * Vars.tilesize + offset;
 
-        // Círculo de alcance pontilhado
         Drawf.dashCircle(cx, cy, shieldRange, Pal.accent);
 
         LinearShieldBuild closest = null;
         float minDist = shieldRange;
 
-        // Procura o aliado mais próximo
         for (LinearShieldBuild other : activeShields) {
             if (other.team != Vars.player.team()) continue;
             float d = Mathf.dst(cx, cy, other.x, other.y);
@@ -98,7 +90,6 @@ public class LinearShieldProjector extends Block {
             }
         }
 
-        // Desenha a linha de pré-conexão
         if (closest != null) {
             Drawf.square(closest.x, closest.y, closest.block.size * Vars.tilesize / 2f + 1f, Pal.place);
             Lines.stroke(2f, Pal.place);
@@ -117,7 +108,6 @@ public class LinearShieldProjector extends Block {
             activeShields.addUnique(this);
         }
 
-        // AUTO-CONEXÃO AO SER CONSTRUÍDO
         @Override
         public void placed() {
             super.placed();
@@ -138,6 +128,25 @@ public class LinearShieldProjector extends Block {
             }
         }
 
+        // =========================================================================
+        // MÁGICA DA INVENCIBILIDADE E DETECÇÃO DE DANO DA NUKE
+        // =========================================================================
+        @Override
+        public void damage(float damage) {
+            // Se já está sobrecarregando (piscando), fica imune a QUALQUER dano!
+            if (isOverloading) return;
+
+            // Se for um dano massivo (como a explosão de 15k da bomba ou uma reação em cadeia)
+            // absorve o impacto e aciona a sobrecarga ao invés de morrer na hora
+            if (damage >= 3000f) {
+                triggerOverload();
+                return;
+            }
+
+            // Se for dano normal (tiros comuns), recebe normalmente
+            super.damage(damage);
+        }
+
         @Override
         public void drawConfigure() {
             super.drawConfigure();
@@ -154,12 +163,12 @@ public class LinearShieldProjector extends Block {
         @Override
         public boolean onConfigureBuildTapped(Building other) {
             if (this == other) {
-                configure(pos()); // Clicou em si mesmo = limpa
+                configure(pos());
                 deselect();
                 return false;
             }
             if (other instanceof LinearShieldBuild && dst(other) <= shieldRange) {
-                configure(other.pos()); // Clicou em outro = conecta/desconecta
+                configure(other.pos());
                 return false;
             }
             return super.onConfigureBuildTapped(other);
@@ -199,17 +208,17 @@ public class LinearShieldProjector extends Block {
                 Fx.shieldBreak.at(x, y);
             }
 
+            // Timer do pisca-pisca antes da explosão
             if (isOverloading) {
                 overloadTimer += Time.delta;
+                // Ao chegar em 60 frames (1 segundo), ele finalmente explode
                 if (overloadTimer >= 60f) executeOverload();
             }
 
-            // A LÓGICA DO "ENGOLIDOR DE BOMBAS" (E balas normais)
             if (!broken && warmup > 0.5f) {
                 for (int i = 0; i < links.size; i++) {
                     Building linked = Vars.world.build(links.get(i));
 
-                    // Apenas um lado calcula a colisão para economizar CPU
                     if (isValidLink(linked) && linked.pos() > pos()) {
                         LinearShieldBuild b = (LinearShieldBuild) linked;
                         if (b.broken) continue;
@@ -218,17 +227,28 @@ public class LinearShieldProjector extends Block {
                         Groups.bullet.intersect(Math.min(x, linked.x) - thickness, Math.min(y, linked.y) - thickness, Math.abs(x - linked.x) + thickness * 2, Math.abs(y - linked.y) + thickness * 2, bullet -> {
 
                             if (bullet.team != team) {
-                                boolean hitLine = Intersector.distanceLinePoint(x, y, linked.x, linked.y, bullet.x, bullet.y) <= thickness + bullet.type.hitSize / 2f;
-                                if (!hitLine) hitLine = Intersector.intersectSegments(bullet.x - bullet.vel.x, bullet.y - bullet.vel.y, bullet.x, bullet.y, x, y, linked.x, linked.y, null);
+                                Vec2 intercept = new Vec2();
+                                boolean hitLine = false;
+
+                                if (Intersector.intersectSegments(bullet.x - bullet.vel.x, bullet.y - bullet.vel.y, bullet.x, bullet.y, x, y, linked.x, linked.y, intercept)) {
+                                    hitLine = true;
+                                }
+                                else if (Intersector.distanceLinePoint(x, y, linked.x, linked.y, bullet.x, bullet.y) <= thickness + bullet.type.hitSize / 2f) {
+                                    hitLine = true;
+                                    intercept.set(bullet.x, bullet.y);
+                                }
 
                                 if (hitLine) {
-                                    // A MÁGICA: Se o tiro for a Bomba Nuclear
                                     if (bullet.type instanceof SiloNuclear.NukeBulletType) {
-                                        bullet.data = "absorvido"; // Avisa a bomba para NÃO explodir (Fica inofensiva)
-                                        bullet.remove(); // Apaga ela do jogo fisicamente
-                                        triggerOverload(); // Aciona a destruição em cadeia do Escudo
+                                        Vec2 recuo = new Vec2().trns(bullet.rotation() + 180f, 8f);
+                                        bullet.x = intercept.x + recuo.x;
+                                        bullet.y = intercept.y + recuo.y;
+                                        bullet.remove();
+
+                                        // Aciona a sobrecarga diretamente pela linha do escudo
+                                        triggerOverload();
+                                        b.triggerOverload();
                                     }
-                                    // Se for tiro normal (Titanium, Surge, etc)
                                     else if (bullet.type.absorbable) {
                                         bullet.absorb();
                                         hit = b.hit = 1f;
@@ -245,19 +265,26 @@ public class LinearShieldProjector extends Block {
         }
 
         public void triggerOverload() {
-            if (isOverloading) return;
+            if (isOverloading) return; // Evita que ele recomece o timer se for atingido de novo
             isOverloading = true;
             overloadTimer = 0f;
+            health = maxHealth; // Restaura a vida para não morrer pra tiros perdidos enquanto pisca!
         }
 
-        // EXPLOSÃO EM CADEIA
         private void executeOverload() {
-            this.kill();
-            Fx.massiveExplosion.at(x, y);
+            // 1. Avisa os vizinhos PRIMEIRO! (O "Zap da Morte")
             for (int i = 0; i < links.size; i++) {
                 Building other = Vars.world.build(links.get(i));
-                if (isValidLink(other)) ((LinearShieldBuild) other).triggerOverload();
+                if (isValidLink(other)) {
+                    ((LinearShieldBuild) other).triggerOverload();
+                }
             }
+
+            // 2. Animação de explosão
+            Fx.massiveExplosion.at(x, y);
+
+            // 3. Agora sim, morre e corta as conexões
+            super.kill();
         }
 
         @Override
@@ -273,29 +300,22 @@ public class LinearShieldProjector extends Block {
                     if (b.broken) continue;
 
                     float angle = Angles.angle(x, y, linked.x, linked.y);
-
-                    // ESCUDO MAIS FORTE: Opacidade base 75%
                     float alpha = (0.75f + 0.25f * Math.max(hit, b.hit)) * warmup;
 
                     Draw.color(team.color);
-
-                    // Camada 1: Fundo (Glow Largo e suave)
                     Draw.alpha(alpha * 0.4f);
                     Lines.stroke(16f);
                     Lines.line(x, y, linked.x, linked.y);
 
-                    // Camada 2: Núcleo (Sólido com a cor do time)
                     Draw.alpha(alpha * 0.8f);
                     Lines.stroke(8f);
                     Lines.line(x, y, linked.x, linked.y);
 
-                    // Camada 3: Feixe Central (Branco Puro para aspecto de laser)
                     Draw.color(Color.white);
                     Draw.alpha(alpha);
                     Lines.stroke(3f);
                     Lines.line(x, y, linked.x, linked.y);
 
-                    // Conexões estéticas
                     Draw.color(team.color);
                     Draw.alpha(alpha);
                     Lines.stroke(3f);
@@ -306,10 +326,10 @@ public class LinearShieldProjector extends Block {
                 }
             }
 
-            // Animação visual de que o escudo vai explodir
+            // Animação do poste "piscando" em vermelho
             if (isOverloading) {
                 Draw.color(Color.red);
-                Draw.alpha(Mathf.absin(4f, 1f));
+                Draw.alpha(Mathf.absin(4f, 1f)); // Pisca rápido
                 Fill.circle(x, y, block.size * 4f + Mathf.absin(2f, 4f));
             }
             Draw.reset();
