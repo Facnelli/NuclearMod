@@ -1,7 +1,9 @@
 package nuclearmod;
 
 import arc.util.Log;
+import mindustry.Vars;
 import mindustry.mod.Mod;
+import mindustry.type.UnitType;
 import nuclearmod.content.ModBlocks;
 import nuclearmod.content.ModFx;
 import nuclearmod.content.ModItems;
@@ -14,6 +16,7 @@ public class NuclearMod extends Mod {
 
     @Override
     public void loadContent() {
+
         Log.info("Carregando conteúdo do Nuclear Mod...");
 
         ModItems.load();

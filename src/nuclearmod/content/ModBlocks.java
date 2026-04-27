@@ -121,8 +121,8 @@ public class ModBlocks {
             itemCapacity = 500;
             outputItem = new ItemStack(ModItems.circuit, 1);
 
-            consumePower(20.0f);
-            consumeItems(with(Items.silicon, 500, ModItems.steel, 250, Items.surgeAlloy, 500));
+            consumePower(5.0f);
+            consumeItems(with(Items.silicon, 200, ModItems.steel, 100, Items.surgeAlloy, 300));
 
             updateEffect = Fx.smeltsmoke;
             craftEffect = Fx.formsmoke;
@@ -139,15 +139,15 @@ public class ModBlocks {
             category = Category.crafting;
             alwaysUnlocked = true;
 
-            requirements(Category.crafting, with(Items.titanium, 200, Items.lead, 150, Items.silicon, 100));
+            requirements(Category.crafting, with(Items.titanium, 100, Items.lead, 50, Items.silicon, 100));
 
-            craftTime = 1000f;
+            craftTime = 120f;
             itemCapacity = 250;
             outputItem = new ItemStack(ModItems.steel, 1);
 
-            consumePower(20.0f);
-            consumeItems(with(Items.graphite, 50, ModItems.iron, 250));
-            consumeLiquid(Liquids.slag, 1.0f);
+            consumePower(2.0f);
+            consumeItems(with(Items.graphite, 4, ModItems.iron, 5.5));
+            consumeLiquid(Liquids.slag, 0.3f);
 
             updateEffect = Fx.smeltsmoke;
             craftEffect = Fx.formsmoke;
@@ -193,8 +193,8 @@ public class ModBlocks {
             rotate = true;
 
             requirements(Category.crafting, with(ModItems.steel, 2000, Items.surgeAlloy, 500, Items.silicon, 800));
-            consumeLiquid(Liquids.oil,1.0f);
-            consumePower(300f); // Consome bastante energia para soldar as peças
+            consumeLiquid(Liquids.oil,0.5f);
+            consumePower(30f); // Consome bastante energia para soldar as peças
         }};
 
         projetorLinear = new LinearShieldProjector("projetor-linear") {{
@@ -207,7 +207,7 @@ public class ModBlocks {
 
             requirements(Category.effect, with(Items.titanium, 100, Items.silicon, 50, Items.surgeAlloy, 25, ModItems.steel, 10));
 
-            consumePower(10f); // O custo energético para manter a barreira ligada
+            consumePower(5f); // O custo energético para manter a barreira ligada
         }};
 
     }
