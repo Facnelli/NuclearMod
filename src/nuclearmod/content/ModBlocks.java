@@ -54,8 +54,8 @@ public class ModBlocks {
 
             requirements(Category.crafting, with(Items.copper, 200, Items.lead, 150, Items.silicon, 100, Items.plastanium, 50));
 
-            craftTime = 120f;
-            itemCapacity = 20;
+            craftTime = 60f;
+            itemCapacity = 5;
             liquidCapacity = 50;
             outputItem = new ItemStack(ModItems.uranioEnriquecido, 1);
 
@@ -117,12 +117,12 @@ public class ModBlocks {
 
             requirements(Category.crafting, with(Items.copper, 200, Items.lead, 150, Items.silicon, 100, Items.surgeAlloy, 50));
 
-            craftTime = 1000f;
-            itemCapacity = 500;
+            craftTime = 300f;
+            itemCapacity = 10;
             outputItem = new ItemStack(ModItems.circuit, 1);
 
             consumePower(5.0f);
-            consumeItems(with(Items.silicon, 200, ModItems.steel, 100, Items.surgeAlloy, 300));
+            consumeItems(with(Items.silicon, 10, ModItems.steel, 10, Items.surgeAlloy, 10));
 
             updateEffect = Fx.smeltsmoke;
             craftEffect = Fx.formsmoke;
@@ -142,12 +142,12 @@ public class ModBlocks {
             requirements(Category.crafting, with(Items.titanium, 100, Items.lead, 50, Items.silicon, 100));
 
             craftTime = 120f;
-            itemCapacity = 250;
-            outputItem = new ItemStack(ModItems.steel, 1);
+            itemCapacity = 20;
+            outputItem = new ItemStack(ModItems.steel, 2);
 
             consumePower(2.0f);
-            consumeItems(with(Items.graphite, 4, ModItems.iron, 5.5));
-            consumeLiquid(Liquids.slag, 0.3f);
+            consumeItems(with(Items.graphite, 4, ModItems.iron, 5));
+            consumeLiquid(Liquids.slag, 0.2f);
 
             updateEffect = Fx.smeltsmoke;
             craftEffect = Fx.formsmoke;
@@ -162,16 +162,16 @@ public class ModBlocks {
 
         missileFactory = new MissilePartFactory("missile-factory") {{
             localizedName = "Fábrica de Peças de Míssil";
-            requirements(Category.crafting, with(Items.titanium, 1500, Items.silicon, 150));
+            requirements(Category.crafting, with(Items.titanium, 1500, Items.silicon, 150, Items.surgeAlloy, 150));
             size = 5;
-            itemCapacity = 150;
+            itemCapacity = 1000;
 
             rotate = true;
 
             plans.add(
-                    new MissilePartFactory.PartRecipe(missilePartA, with(ModItems.steel, 30, Items.silicon, 20, Items.plastanium, 10)),
-                    new MissilePartFactory.PartRecipe(missilePartB, with(ModItems.steel, 25, ModItems.circuit, 15, ModItems.uranioEnriquecido, 40)), // Usando Urânio Enriquecido
-                    new MissilePartFactory.PartRecipe(missilePartC, with(Items.titanium, 30, ModItems.steel, 20, Items.plastanium, 15))
+                    new MissilePartFactory.PartRecipe(missilePartA, with(ModItems.steel, 30, Items.silicon, 20, Items.plastanium, 100)),
+                    new MissilePartFactory.PartRecipe(missilePartB, with(ModItems.steel, 25, ModItems.circuit, 15, ModItems.uranioEnriquecido, 400)), // Usando Urânio Enriquecido
+                    new MissilePartFactory.PartRecipe(missilePartC, with(Items.titanium, 30, ModItems.steel, 20, Items.plastanium, 150))
             );
         }};
 
@@ -181,6 +181,7 @@ public class ModBlocks {
             solid = true;
             destructible = true;
             health = 2000;
+            destroyEffect = ModFx.nukeExplosion;
         }};
 
         // --- MONTADORA DE MÍSSEIS ---
@@ -192,8 +193,8 @@ public class ModBlocks {
 
             rotate = true;
 
-            requirements(Category.crafting, with(ModItems.steel, 2000, Items.surgeAlloy, 500, Items.silicon, 800));
-            consumeLiquid(Liquids.oil,0.5f);
+            requirements(Category.crafting, with(ModItems.steel, 500, Items.surgeAlloy, 500, Items.silicon, 800));
+            consumeLiquid(Liquids.oil,0.1f);
             consumePower(30f); // Consome bastante energia para soldar as peças
         }};
 
