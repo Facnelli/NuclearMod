@@ -1,4 +1,4 @@
-package nuclearmod.blocks;
+package nuclearmod.blocks.defense;
 
 import arc.Events;
 import arc.graphics.Color;
@@ -25,6 +25,9 @@ import mindustry.graphics.Layer;
 import mindustry.graphics.Pal;
 import mindustry.world.Block;
 import mindustry.world.meta.BlockGroup;
+import nuclearmod.config.ModBalance;
+import nuclearmod.config.ModBalanceDefaults;
+import nuclearmod.type.bullet.NukeBulletType;
 
 public class LinearShieldProjector extends Block {
     public static Seq<LinearShieldBuild> activeShields = new Seq<>();
@@ -33,11 +36,11 @@ public class LinearShieldProjector extends Block {
         Events.on(ResetEvent.class, event -> activeShields.clear());
     }
 
-    public float shieldRange = 160f;
+    public float shieldRange = ModBalanceDefaults.Shield.RANGE;
     public int maxLinks = 3;
-    public float shieldHealth = 2500f;
-    public float cooldownNormal = 1.5f;
-    public float cooldownBrokenBase = 0.5f;
+    public float shieldHealth = ModBalanceDefaults.Shield.HEALTH;
+    public float cooldownNormal = ModBalanceDefaults.Shield.COOLDOWN_NORMAL;
+    public float cooldownBrokenBase = ModBalanceDefaults.Shield.COOLDOWN_BROKEN;
 
     public LinearShieldProjector(String name) {
         super(name);
@@ -132,7 +135,7 @@ public class LinearShieldProjector extends Block {
         public void damage(float damage) {
             if (isOverloading) return;
 
-            if (damage >= 3000f) {
+            if (damage >= ModBalance.Shield.overloadDamageThreshold) {
                 triggerOverload();
                 return;
             }
@@ -183,6 +186,10 @@ public class LinearShieldProjector extends Block {
 
         @Override
         public void updateTile() {
+            shieldRange = ModBalance.Shield.range;
+            shieldHealth = ModBalance.Shield.health;
+            cooldownNormal = ModBalance.Shield.cooldownNormal;
+            cooldownBrokenBase = ModBalance.Shield.cooldownBroken;
             hit = Mathf.lerpDelta(hit, 0f, 0.1f);
 
             if (broken) {
@@ -230,7 +237,7 @@ public class LinearShieldProjector extends Block {
                                 }
 
                                 if (hitLine) {
-                                    if (bullet.type instanceof SiloNuclear.NukeBulletType) {
+                                    if (bullet.type instanceof NukeBulletType) {
                                         Vec2 recuo = new Vec2().trns(bullet.rotation() + 180f, 8f);
                                         bullet.x = intercept.x + recuo.x;
                                         bullet.y = intercept.y + recuo.y;

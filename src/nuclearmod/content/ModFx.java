@@ -4,6 +4,7 @@ import arc.graphics.Color;
 import arc.graphics.g2d.Draw;
 import arc.graphics.g2d.Fill;
 import arc.graphics.g2d.Lines;
+import arc.math.Angles;
 import arc.math.Mathf;
 import arc.math.Rand;
 import mindustry.entities.Effect;
@@ -11,7 +12,8 @@ import mindustry.graphics.Layer; // Importação para desenhar as cinzas no chã
 
 public class ModFx {
     public static Effect nukeExplosion;
-    public static Effect nukeScorch; // Novo efeito declarado
+    public static Effect nukeScorch;
+    public static Effect blueFire;
 
     public static void load() {
         nukeExplosion = new Effect(1200f, 2000f, e -> {
@@ -64,6 +66,13 @@ public class ModFx {
             Draw.alpha(0.8f * (1f - e.fin()));
             Fill.square(e.x, e.y, 8f);
             Draw.reset();
+        });
+
+        blueFire = new Effect(90f, e -> {
+            Draw.color(Color.valueOf("00aaff"), Color.valueOf("0044cc"), Color.darkGray, e.fin());
+            Angles.randLenVectors(e.id, 5, 2f + e.fin() * 10f, (x, y) -> {
+                Fill.circle(e.x + x, e.y + y, 0.8f + e.fout() * 2.5f);
+            });
         });
     }
 }
